@@ -1,75 +1,116 @@
-def divide_matrix(matrix, block_size, direction=:horizontal)
-  rows = matrix.length
-  cols = matrix[0].length
+class CakeDivider
+  def initialize(cake)
+    @cake = cake
+    @cake_matrix = convert_to_matrix(cake)
+  end
 
-  pieces = []
+  def divide_cake_by_raisins
+    return puts 'All rows must have the same number of elements.' unless @cake.all? { |row| row.length == @cake[0].length }
 
-  if direction == :horizontal
-    # Перевіряємо, чи можна розділити на горизонтальні блоки
-    return 'Неможливо розділити горизонтально' unless rows % block_size == 0
+    # Розміри торта
+    rows = @cake_matrix.length
+    columns = @cake_matrix[0].length
 
-    (0...rows).step(block_size) do |i|
-      block = matrix[i, block_size]
-      raisin_count = block.flatten.count('o')
+    # Кількість родзинок
+    raisin_count = @cake_matrix.flatten.count(0)
 
-      # Перевіряємо, чи в кожному блоці є рівно одна родзинка
-      if raisin_count != 1
-        return "Неможливо розділити: у блоці з рядків #{i}–#{i+block_size-1} кількість родзинок не дорівнює 1"
+    # Якщо немає родзинок
+    return puts 'Cannot divide the cake: no raisins.' if raisin_count.zero?
+
+    # Площа та розмір прямокутника
+    area = rows * columns
+    if area % raisin_count != 0
+      return puts 'Cannot divide the cake: the area is not divisible by the number of raisins.'
+    end
+    rect_area = area / raisin_count
+
+    # Можливі розміри прямокутників
+    possible_sizes = find_possible_sizes(rect_area)
+
+    # Ділимо торт
+    rectangles = []
+
+    possible_sizes.each do |height, width|
+      next unless rows % height == 0 && columns % width == 0
+
+      valid = true
+      (0...rows).step(height) do |r|
+        (0...columns).step(width) do |c|
+          rectangle = []
+          raisin_count_in_rect = 0
+
+          (0...height).each do |i|
+            row = @cake_matrix[r + i][c, width]
+            rectangle << row
+            raisin_count_in_rect += row.count(0)
+          end
+
+          # Перевірка на кількість родзинок в прямокутнику
+          if raisin_count_in_rect != 1
+            valid = false
+            break
+          end
+        end
+        break unless valid
       end
 
-      pieces << block
-    end
-  elsif direction == :vertical
-    # Перевіряємо, чи можна розділити на вертикальні блоки
-    return 'Неможливо розділити вертикально' unless cols % block_size == 0
-
-    (0...cols).step(block_size) do |i|
-      block = matrix.map { |row| row[i, block_size] }  # Вибираємо стовпці
-      raisin_count = block.flatten.count('o')
-
-      # Перевіряємо, чи в кожному блоці є рівно одна родзинка
-      if raisin_count != 1
-        return "Неможливо розділити: у блоці з стовпців #{i}–#{i+block_size-1} кількість родзинок не дорівнює 1"
+      if valid
+        # Зберігаємо прямокутник
+        (0...rows).step(height) do |r|
+          (0...columns).step(width) do |c|
+            rectangle = []
+            (0...height).each do |i|
+              rectangle << @cake[r + i][c, width]
+            end
+            rectangles << rectangle
+          end
+        end
+        break
       end
+    end
 
-      pieces << block
+    # Результати
+    if rectangles.empty?
+      puts 'Cannot divide the cake so that each rectangle contains one raisin.'
+    else
+      puts "The cake has been divided into rectangles:"
+      rectangles.each_with_index do |rectangle, index|
+        puts "Rectangle  #{index + 1}:"
+        rectangle.each { |row| puts row }
+      end
     end
   end
 
-  pieces
+  private
+
+  # Перетворюємо торт у матрицю чисел
+  def convert_to_matrix(cake)
+    cake.map do |row|
+      row.chars.map { |cell| cell == 'о' || cell == 'o' ? 0 : 1 }
+    end
+  end
+
+  # Знаходимо можливі розміри прямокутників
+  def find_possible_sizes(rect_area)
+    possible_sizes = []
+    (2..rect_area).each do |h|
+      if rect_area % h == 0
+        w = rect_area / h
+        possible_sizes << [h, w] if w >= 2
+      end
+    end
+    possible_sizes
+  end
 end
 
-def divide_with_flexibility(matrix)
-  # Пробуємо розділити на горизонтальні блоки по 2 рядки
-  result = divide_matrix(matrix, 2, :horizontal)
-
-  if result.is_a?(String)  # Якщо не вдалося, пробуємо на 1 рядок
-    puts "Не вдалося розділити горизонтально на 2 рядки. Пробуємо на 1 рядок..."
-    result = divide_matrix(matrix, 1, :horizontal)
-  end
-
-  if result.is_a?(String)  # Якщо не вдалося розділити горизонтально, пробуємо вертикально
-    puts "Не вдалося розділити горизонтально. Пробуємо вертикально на 2 стовпці..."
-    result = divide_matrix(matrix, 2, :vertical)
-  end
-
-  if result.is_a?(String)  # Якщо не вдалося на 2 стовпці, пробуємо на 1 стовпець
-    puts "Не вдалося розділити вертикально на 2 стовпці. Пробуємо на 1 стовпець..."
-    result = divide_matrix(matrix, 1, :vertical)
-  end
-
-  result
-end
-
-# Приклад використання
-matrix = [
-  ['.', '.', '.', 'o'],
-  ['.', '.', '.', '.'],
-  ['.', '.', 'o', '.'],
-  ['o', 'o', '.', '.'],
-  ['.', '.', '.', '.'],
-  ['.', '.', '.', '.'],
+# Введення торта
+cake = [
+  '.о...o..',
+  '........',
+  '.о......',
+  '.....o..',
 ]
 
-result = divide_with_flexibility(matrix)
-puts result.is_a?(String) ? result : result.map { |piece| piece.inspect }.join("\n")
+# Створюємо екземпляр класу та ділимо торт
+divider = CakeDivider.new(cake)
+divider.divide_cake_by_raisins
