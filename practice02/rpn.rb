@@ -1,50 +1,46 @@
-PRIORITY = {
-  '+' => 1,
-  '-' => 1,
-  '*' => 2,
-  '/' => 2
-}
-
-def number?(token)
-  token =~ /\d/
+def check_division_by_zero(expression)
+  if expression =~ /\/\s*0(?!\d)/
+    raise "Помилка: Вираз містить ділення на 0"
+  end
 end
 
-def operator?(token)
-  PRIORITY.key?(token)
-end
-
-def infix_to_rpn(expression)
-  outputresult = []
+# Метод для конвертації звичайного виразу у зворотну польську нотацію
+def rpn(expression)
+  output = []
   operators = []
+  precedence = { "+" => 1, "-" => 1, "*" => 2, "/" => 2, "**" => 3 }
 
-  tokens = expression.scan(/\d+|\S/)
-
-  tokens.each do |token|
-    if number?(token)
-      outputresult << token
-    elsif operator?(token)
-      while !operators.empty? && PRIORITY[operators.last] && PRIORITY[operators.last] >= PRIORITY[token]
-        outputresult << operators.pop
+  expression.scan(/\d+|[-+*\/()]/).each do |token|
+    case token
+    when /\d/
+      output.push(token)
+    when "+", "-", "*", "/", "**"
+      while !operators.empty? && operators.last != "(" && precedence[operators.last] >= precedence[token]
+        output.push(operators.pop)
       end
-      operators << token
-    elsif token == '('
       operators.push(token)
-    elsif token == ')'
-      while operators.last != '('
-        outputresult << operators.pop
+    when "("
+      operators.push(token)
+    when ")"
+      while operators.last != "("
+        output.push(operators.pop)
       end
       operators.pop
     end
   end
 
-  while !operators.empty?
-    outputresult << operators.pop
-  end
-
-  outputresult.join(' ')
+  output.concat(operators.reverse) # Додаємо всі залишкові оператори
+  output.join(" ")
 end
 
-puts "Enter an expression (example: 12 + 2 * ((3 * 4) + (10 / 5))):"
+puts "Введіть математичний вираз:"
 expression = gets.chomp
 
-puts "RPN: #{infix_to_rpn(expression)}"
+begin
+  check_division_by_zero(expression)
+  # Конвертуємо у зворотну польську нотацію
+  rpn_exp = rpn(expression)
+  puts "Зворотна польська нотація: #{rpn_exp}"
+rescue => e
+  puts e.message
+end
